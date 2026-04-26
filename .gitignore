@@ -1,0 +1,44 @@
+# ---- Build Output ----
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ---- Compiled Files ----
+*.class
+
+# ---- Packaging ----
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- Env & Secrets (절대 커밋 금지) ----
+.env
+.env.*
+!.env.example
+application-local.yml
+application-prod.yml
+application-secret.yml
+
+# ---- IDE ----
+.idea/
+*.iml
+*.iws
+.vscode/
+*.swp
+*.swo
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Spring Boot ----
+spring-shell.log
