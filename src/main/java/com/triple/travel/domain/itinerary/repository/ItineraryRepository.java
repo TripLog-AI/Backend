@@ -13,16 +13,15 @@ import java.util.Optional;
 public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
 
     /**
-     * 상세 조회: Itinerary → days → slots → place 를 JOIN FETCH로 한 쿼리에 로딩.
-     * 세 단계 중첩 컬렉션이지만 선형(parent→child→grandchild) 구조라
-     * MultipleBagFetchException 발생 없음.
-     * alternatives는 @BatchSize(100)으로 별도 IN 쿼리 처리.
+     * 상세 조회: Itinerary + days를 JOIN FETCH (단일 컬렉션만).
+     * slots, place, alternatives는 hibernate.default_batch_fetch_size=100 으로
+     * 자동 IN-쿼리 batch fetch — 총 3~4 queries로 N+1 회피.
+     *
+     * 두 컬렉션(List)을 동시에 JOIN FETCH 하면 MultipleBagFetchException 발생.
      */
-    @Query("SELECT DISTINCT i FROM Itinerary i " +
+    @Query("SELECT i FROM Itinerary i " +
            "JOIN FETCH i.user " +
-           "JOIN FETCH i.days d " +
-           "JOIN FETCH d.slots s " +
-           "JOIN FETCH s.place " +
+           "LEFT JOIN FETCH i.days " +
            "WHERE i.id = :id")
     Optional<Itinerary> findWithDaysAndSlotsById(@Param("id") Long id);
 

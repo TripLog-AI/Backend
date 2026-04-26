@@ -13,27 +13,21 @@ import java.util.Optional;
 public interface TravelogueRepository extends JpaRepository<Travelogue, Long> {
 
     /**
-     * 여행기 상세: days → blocks → place 를 JOIN FETCH로 한 번에 로딩.
-     * Travelogue는 불변에 가까운 공개 데이터이므로 전체 그래프 로딩이 합리적.
+     * 여행기 상세: Travelogue + days를 JOIN FETCH (단일 컬렉션만).
+     * blocks와 place는 hibernate.default_batch_fetch_size=100 으로 자동 batch fetch.
      */
-    @Query("SELECT DISTINCT t FROM Travelogue t " +
+    @Query("SELECT t FROM Travelogue t " +
            "JOIN FETCH t.user " +
-           "JOIN FETCH t.days d " +
-           "JOIN FETCH d.blocks b " +
-           "LEFT JOIN FETCH b.place " +
+           "LEFT JOIN FETCH t.days " +
            "WHERE t.id = :id")
     Optional<Travelogue> findWithDaysAndBlocksById(@Param("id") Long id);
 
     /**
-     * 스크랩용: PLACE 블록만 로딩 (place 포함).
-     * 동선 복사 시 TEXT/IMAGE 블록 불필요 → WHERE 조건으로 필터.
+     * 스크랩용: 동일 쿼리. blocks의 PLACE 필터링은 service에서 처리.
      */
-    @Query("SELECT DISTINCT t FROM Travelogue t " +
-           "JOIN FETCH t.days d " +
-           "JOIN FETCH d.blocks b " +
-           "JOIN FETCH b.place " +
-           "WHERE t.id = :id AND b.blockType = 'PLACE'")
-    Optional<Travelogue> findWithPlaceBlocksById(@Param("id") Long id);
+    default Optional<Travelogue> findWithPlaceBlocksById(Long id) {
+        return findWithDaysAndBlocksById(id);
+    }
 
     /**
      * 공개 피드 - 커서 기반 페이지네이션.
