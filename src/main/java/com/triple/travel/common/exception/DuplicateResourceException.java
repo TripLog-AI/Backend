@@ -9,6 +9,11 @@ public class DuplicateResourceException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    public DuplicateResourceException(String errorCode, String message) {
+        super(message);
+        this.errorCode = errorCode;
+    }
+
     public String getErrorCode() {
         return errorCode;
     }

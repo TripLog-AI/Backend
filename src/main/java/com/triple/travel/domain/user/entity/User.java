@@ -26,6 +26,10 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String nickname;
 
+    /** 소셜 로그인(LOCAL 외)은 null. LOCAL은 BCrypt 해시 저장. */
+    @Column(length = 100)
+    private String password;
+
     @Column(length = 512)
     private String profileImageUrl;
 
@@ -37,18 +41,32 @@ public class User extends BaseEntity {
     private String providerId;
 
     @Builder
-    private User(String email, String nickname, String profileImageUrl,
+    private User(String email, String nickname, String password, String profileImageUrl,
                  Provider provider, String providerId) {
         this.email = email;
         this.nickname = nickname;
+        this.password = password;
         this.profileImageUrl = profileImageUrl;
         this.provider = provider;
         this.providerId = providerId;
     }
 
+    public static User registerLocal(String email, String nickname, String encodedPassword) {
+        return User.builder()
+            .email(email)
+            .nickname(nickname)
+            .password(encodedPassword)
+            .provider(Provider.LOCAL)
+            .build();
+    }
+
     public void updateProfile(String nickname, String profileImageUrl) {
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
     }
 
     public enum Provider {
