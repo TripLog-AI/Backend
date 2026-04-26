@@ -89,7 +89,8 @@ src/main/java/com/triple/travel/
 - ✅ 모든 Controller 실 service 연결 (Mock 제거 완료)
 - ✅ AI 서비스 RestClient (`AiClient`) — AI 서버 없으면 즉시 FAILED
 - ✅ Google Maps 클라이언트 골격 (api-key 없으면 DB 폴백)
-- ✅ DevDataSeeder — 부팅 시 YouTube featured 코스 3개 자동 시드
+- ✅ DevDataSeeder — admin user + featured 코스 3개 + Tokyo 시드 일정 자동
+- ✅ YouTube 코스 deep-copy (`saveCourse`로 시드 일정을 내 일정으로 복사)
+- ✅ 도커화 — `Dockerfile` + `docker-compose.yml` (BE + MySQL 8)
 - 🔧 Google Maps Places API 실제 호출 (`GoogleMapsClient.searchText` TODO)
 - 🔧 소셜 로그인 (Google/Kakao OAuth2)
-- 🔧 YouTube seed 코스 deep-copy
