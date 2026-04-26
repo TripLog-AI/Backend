@@ -43,4 +43,14 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
      * 소유권 검증 포함 단건 조회 - 권한 체크와 엔티티 로딩을 한 번에.
      */
     Optional<Itinerary> findByIdAndUserId(Long id, Long userId);
+
+    /**
+     * 시스템이 보유한 YouTube 시드 일정 (saveCourse deep-copy 시 원본).
+     * youtube_source 1개당 시드 일정 1개를 가정.
+     */
+    @Query("SELECT i FROM Itinerary i " +
+           "LEFT JOIN FETCH i.days " +
+           "WHERE i.youtubeSource.id = :youtubeSourceId " +
+           "AND i.sourceType = com.triple.travel.domain.itinerary.entity.Itinerary$SourceType.YOUTUBE_SEED")
+    Optional<Itinerary> findSeedByYoutubeSourceId(@Param("youtubeSourceId") Long youtubeSourceId);
 }
