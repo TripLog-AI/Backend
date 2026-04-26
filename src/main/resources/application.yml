@@ -7,6 +7,9 @@ app:
     # 운영 시 반드시 환경변수 JWT_SECRET 으로 덮어쓸 것 (256bit 이상 랜덤 문자열)
     secret: ${JWT_SECRET:dev-only-secret-key-please-override-in-prod-min-256-bits-required-here}
     access-token-expiry-hours: ${JWT_EXPIRY_HOURS:24}
+  ai:
+    base-url: ${AI_SERVICE_URL:http://localhost:8000}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
 
 ---
 spring:

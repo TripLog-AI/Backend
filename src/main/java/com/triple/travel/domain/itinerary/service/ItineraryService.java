@@ -1,5 +1,8 @@
 package com.triple.travel.domain.itinerary.service;
 
+import com.triple.travel.common.client.ai.AiClient;
+import com.triple.travel.common.client.ai.AiServiceDto;
+import com.triple.travel.common.client.ai.AiServiceException;
 import com.triple.travel.common.exception.EntityNotFoundException;
 import com.triple.travel.common.exception.ForbiddenException;
 import com.triple.travel.domain.itinerary.dto.ItineraryRequest;
@@ -13,6 +16,7 @@ import com.triple.travel.domain.place.repository.PlaceRepository;
 import com.triple.travel.domain.user.entity.User;
 import com.triple.travel.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +29,7 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -37,6 +42,7 @@ public class ItineraryService {
     private final AiGenerationRequestRepository aiRequestRepository;
     private final UserRepository userRepository;
     private final PlaceRepository placeRepository;
+    private final AiClient aiClient;
 
     // ───────────────────────────────────────────────────────────────
     // 조회
@@ -160,30 +166,163 @@ public class ItineraryService {
     @Transactional
     public ItineraryResponse.JobStatus requestAiGenerate(Long userId, ItineraryRequest.GenerateByAi req) {
         var user = findUser(userId);
-        var inputJson = buildAiFormJson(req);
-
-        var aiRequest = AiGenerationRequest.builder()
+        var aiRequest = aiRequestRepository.save(AiGenerationRequest.builder()
             .user(user)
             .requestType(AiGenerationRequest.RequestType.AI_FORM)
-            .inputData(inputJson)
-            .build();
+            .inputData(buildAiFormJson(req))
+            .build());
 
-        return toJobStatus(aiRequestRepository.save(aiRequest));
+        aiRequest.startProcessing();
+
+        try {
+            var aiPayload = aiClient.generateItinerary(new AiServiceDto.GenerateRequest(
+                req.city(), req.country(), req.startDate(), req.endDate(),
+                req.companionType(), req.themes(), req.pace()
+            ));
+            Long itineraryId = persistAiItinerary(user, aiPayload, req);
+            aiRequest.complete(itineraryId);
+        } catch (AiServiceException ex) {
+            log.warn("AI generate failed for requestId={}: {}", aiRequest.getId(), ex.getMessage());
+            aiRequest.fail(ex.getMessage());
+        }
+        return toJobStatus(aiRequest);
     }
 
     @Transactional
     public ItineraryResponse.JobStatus requestYoutubeParse(Long userId,
                                                             ItineraryRequest.ParseYoutube req) {
         var user = findUser(userId);
-        var inputJson = "{\"youtubeUrl\":\"" + req.youtubeUrl() + "\"}";
-
-        var aiRequest = AiGenerationRequest.builder()
+        var aiRequest = aiRequestRepository.save(AiGenerationRequest.builder()
             .user(user)
             .requestType(AiGenerationRequest.RequestType.YOUTUBE_PARSE)
-            .inputData(inputJson)
-            .build();
+            .inputData("{\"youtubeUrl\":\"" + req.youtubeUrl() + "\"}")
+            .build());
 
-        return toJobStatus(aiRequestRepository.save(aiRequest));
+        aiRequest.startProcessing();
+
+        try {
+            var aiPayload = aiClient.parseYoutube(new AiServiceDto.YoutubeRequest(
+                req.youtubeUrl(), List.of("ko", "en")
+            ));
+            Long itineraryId = persistYoutubeItinerary(user, aiPayload, req);
+            aiRequest.complete(itineraryId);
+        } catch (AiServiceException ex) {
+            log.warn("YouTube parse failed for requestId={}: {}", aiRequest.getId(), ex.getMessage());
+            aiRequest.fail(ex.getMessage());
+        }
+        return toJobStatus(aiRequest);
+    }
+
+    // ── AI 응답 → Itinerary 변환 ─────────────────
+
+    private Long persistAiItinerary(User user, AiServiceDto.ItineraryPayload payload,
+                                     ItineraryRequest.GenerateByAi original) {
+        var itinerary = Itinerary.builder()
+            .user(user)
+            .title(buildAiTitle(payload, original.city()))
+            .city(payload.city() != null ? payload.city() : original.city())
+            .country(payload.country() != null ? payload.country() : original.country())
+            .startDate(original.startDate())
+            .endDate(original.endDate())
+            .companionType(parseEnum(Itinerary.CompanionType.class, original.companionType()))
+            .themes(serializeThemes(original.themes()))
+            .pace(parseEnum(Itinerary.Pace.class, original.pace()))
+            .sourceType(Itinerary.SourceType.AI_GENERATED)
+            .build();
+        return saveItineraryFromPayload(itinerary, payload);
+    }
+
+    private Long persistYoutubeItinerary(User user, AiServiceDto.ItineraryPayload payload,
+                                          ItineraryRequest.ParseYoutube original) {
+        var itinerary = Itinerary.builder()
+            .user(user)
+            .title(buildAiTitle(payload, payload.city()))
+            .city(payload.city())
+            .country(payload.country())
+            .sourceType(Itinerary.SourceType.YOUTUBE_PARSED)
+            .build();
+        return saveItineraryFromPayload(itinerary, payload);
+    }
+
+    private Long saveItineraryFromPayload(Itinerary itinerary, AiServiceDto.ItineraryPayload payload) {
+        if (payload.days() == null) {
+            return itineraryRepository.save(itinerary).getId();
+        }
+
+        for (AiServiceDto.DayDto dayDto : payload.days()) {
+            var day = ItineraryDay.builder()
+                .itinerary(itinerary)
+                .dayNumber(dayDto.dayNumber())
+                .build();
+
+            int slotOrder = 1;
+            if (dayDto.slots() != null) {
+                for (AiServiceDto.SlotDto slotDto : dayDto.slots()) {
+                    var place = findOrCreatePlace(slotDto.place());
+                    var slot = ItinerarySlot.builder()
+                        .itineraryDay(day)
+                        .orderIndex(slotOrder++)
+                        .slotTime(slotDto.slotTime() != null ? LocalTime.parse(slotDto.slotTime()) : null)
+                        .timeCategory(parseEnum(ItinerarySlot.TimeCategory.class, slotDto.timeCategory()))
+                        .stayDurationMinutes(slotDto.stayDurationMinutes())
+                        .place(place)
+                        .build();
+
+                    int altOrder = 1;
+                    if (slotDto.alternatives() != null) {
+                        for (AiServiceDto.AlternativeDto altDto : slotDto.alternatives()) {
+                            slot.getAlternatives().add(ItinerarySlotAlternative.builder()
+                                .slot(slot)
+                                .place(findOrCreatePlace(altDto.place()))
+                                .orderIndex(altOrder++)
+                                .build());
+                        }
+                    }
+                    day.addSlot(slot);
+                }
+            }
+            itinerary.addDay(day);
+        }
+        // Cascade ALL → Itinerary 한 번 저장으로 days/slots/alternatives 일괄 영속화
+        return itineraryRepository.save(itinerary).getId();
+    }
+
+    private Place findOrCreatePlace(AiServiceDto.PlaceDto dto) {
+        // Google Maps 미연동 단계에선 deterministic pseudo ID로 캐시 흉내.
+        // C 단계에서 진짜 google_place_id로 교체 예정.
+        String pseudoId = "AI_" + Integer.toHexString(
+            (dto.name() + ":" + dto.latitude() + ":" + dto.longitude()).hashCode());
+
+        return placeRepository.findByGooglePlaceId(pseudoId).orElseGet(() ->
+            placeRepository.save(Place.builder()
+                .googlePlaceId(pseudoId)
+                .name(dto.name())
+                .nameLocal(dto.nameLocal())
+                .address(dto.address())
+                .category(parseEnumOrDefault(Place.Category.class, dto.category(), Place.Category.OTHER))
+                .latitude(dto.latitude())
+                .longitude(dto.longitude())
+                .build()));
+    }
+
+    private String buildAiTitle(AiServiceDto.ItineraryPayload payload, String fallbackCity) {
+        String city = payload.city() != null ? payload.city() : fallbackCity;
+        int days = payload.days() != null ? payload.days().size() : 0;
+        return String.format("%s %d일 일정", city != null ? city : "여행", Math.max(days, 1));
+    }
+
+    private String serializeThemes(List<String> themes) {
+        return (themes == null || themes.isEmpty()) ? null : String.join(",", themes);
+    }
+
+    private <E extends Enum<E>> E parseEnum(Class<E> clazz, String value) {
+        if (value == null || value.isBlank()) return null;
+        try { return Enum.valueOf(clazz, value); } catch (IllegalArgumentException e) { return null; }
+    }
+
+    private <E extends Enum<E>> E parseEnumOrDefault(Class<E> clazz, String value, E fallback) {
+        E parsed = parseEnum(clazz, value);
+        return parsed != null ? parsed : fallback;
     }
 
     // ───────────────────────────────────────────────────────────────
