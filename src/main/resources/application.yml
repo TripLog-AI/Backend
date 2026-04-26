@@ -10,6 +10,11 @@ app:
   ai:
     base-url: ${AI_SERVICE_URL:http://localhost:8000}
     timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
+  google:
+    maps:
+      # 비어 있으면 외부 API 호출 비활성화 (DB 캐시만 사용)
+      api-key: ${GOOGLE_MAPS_API_KEY:}
+      cache-ttl-days: 7
 
 ---
 spring:
