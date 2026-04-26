@@ -2,9 +2,11 @@
 
 Java 21 / Spring Boot 3.x 기반 REST API 서버
 
-## Quick Start (로컬 실행)
+## Quick Start
 
-> JDK 21 이상 필요. DB 설정 없이 H2 인메모리로 즉시 실행 가능.
+### 옵션 1 — JDK만으로 실행 (가장 빠름, H2 인메모리)
+
+> JDK 21 이상 필요.
 
 ```bash
 ./mvnw spring-boot:run
@@ -15,9 +17,17 @@ Java 21 / Spring Boot 3.x 기반 REST API 서버
 | `http://localhost:8080/swagger-ui.html` | API 명세 + 테스트 |
 | `http://localhost:8080/h2-console` | DB 콘솔 (dev 전용) |
 
-H2 Console 접속 정보:
-- JDBC URL: `jdbc:h2:mem:tripledb`
-- Username: `sa` / Password: (없음)
+H2 Console 접속 정보: JDBC URL `jdbc:h2:mem:tripledb`, Username `sa`, Password 없음
+
+### 옵션 2 — Docker (BE + MySQL 통합, prod 환경 흉내)
+
+```bash
+docker compose up --build
+```
+
+→ Backend + MySQL 8 한 번에 실행. 종료는 `docker compose down` (볼륨 유지) 또는 `docker compose down -v` (DB까지 삭제).
+
+배포 시(EC2)에도 동일한 `docker-compose.yml` 그대로 사용 가능.
 
 ## 환경 변수 설정
 

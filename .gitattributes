@@ -1,0 +1,7 @@
+# Maven Wrapper와 셸 스크립트는 컨테이너(alpine)에서 실행되므로 LF 강제
+mvnw text eol=lf
+*.sh text eol=lf
+
+# Windows 전용 배치는 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf

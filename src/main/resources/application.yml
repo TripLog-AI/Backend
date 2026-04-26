@@ -54,7 +54,7 @@ spring:
     activate:
       on-profile: prod
   datasource:
-    url: jdbc:mysql://localhost:3306/triple_travel?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:triplog_db}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}

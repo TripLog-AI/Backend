@@ -1,0 +1,60 @@
+# 로컬 개발/통합 테스트용 — Backend + MySQL 8 한 번에 실행
+#
+# 사용:
+#   docker compose up --build
+#   → BE: http://localhost:8080
+#   → Swagger: http://localhost:8080/swagger-ui.html
+#   → MySQL: localhost:3306 (root/root, db: triplog_db)
+#
+# 종료:
+#   docker compose down            # 컨테이너만 정리, 볼륨 유지
+#   docker compose down -v         # DB 데이터까지 삭제
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: triplog-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-triplog_db}
+      MYSQL_USER: ${DB_USERNAME:-triplog}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    container_name: triplog-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-triplog_db}
+      DB_USERNAME: ${DB_USERNAME:-triplog}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-key-please-override-min-256-bits-required-here}
+      JWT_EXPIRY_HOURS: ${JWT_EXPIRY_HOURS:-24}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://host.docker.internal:8000}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-60}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      # AI 서비스를 호스트(Docker 외부)에서 띄울 때 host.docker.internal 사용
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  mysql-data:
