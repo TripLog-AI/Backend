@@ -68,7 +68,7 @@ public class YoutubeCourseController {
                 "건축여행자", "https://img.youtube.com/vi/C0DPdy98e4c/maxresdefault.jpg",
                 "Barcelona", "Spain", 3)
         );
-        return ApiResponse.success(mock);
+        return ApiResponse.ok(mock);
     }
 
     @Operation(summary = "유튜버 코스 상세 + 미리보기 일정")
@@ -109,13 +109,13 @@ public class YoutubeCourseController {
             "여행하는 삶", "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
             "Tokyo", "Japan", preview
         );
-        return ApiResponse.success(detail);
+        return ApiResponse.ok(detail);
     }
 
     @Operation(summary = "유튜버 코스를 내 여행에 저장 (딥카피 → 내 계정 일정 생성)")
     @PostMapping("/{courseId}/save")
     public ApiResponse<ItineraryResponse.Created> saveCourse(@PathVariable Long courseId) {
         // Mock: 새로 생성된 내 일정 ID 반환
-        return ApiResponse.success(new ItineraryResponse.Created(99L));
+        return ApiResponse.ok(new ItineraryResponse.Created(99L));
     }
 }

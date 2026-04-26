@@ -2,7 +2,7 @@ package com.triple.travel.common.dto;
 
 /**
  * 전체 API 공통 응답 래퍼.
- * 성공: ApiResponse.success(data)
+ * 성공: ApiResponse.ok(data)
  * 실패: ApiResponse.error("ERROR_CODE", "message")
  */
 public record ApiResponse<T>(
@@ -11,11 +11,11 @@ public record ApiResponse<T>(
     String errorCode,
     String message
 ) {
-    public static <T> ApiResponse<T> success(T data) {
+    public static <T> ApiResponse<T> ok(T data) {
         return new ApiResponse<>(true, data, null, null);
     }
 
-    public static <T> ApiResponse<T> success() {
+    public static <T> ApiResponse<T> ok() {
         return new ApiResponse<>(true, null, null, null);
     }
 

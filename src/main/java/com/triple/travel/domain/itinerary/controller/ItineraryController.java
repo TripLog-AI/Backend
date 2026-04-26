@@ -133,7 +133,7 @@ public class ItineraryController {
                 LocalDate.of(2024, 10, 3), LocalDate.of(2024, 10, 6),
                 "MANUAL", "DRAFT", LocalDateTime.of(2024, 7, 8, 9, 30))
         );
-        return ApiResponse.success(mockList);
+        return ApiResponse.ok(mockList);
     }
 
     @Operation(summary = "여행 일정 상세 조회 (days + slots + alternatives 포함)")
@@ -141,7 +141,7 @@ public class ItineraryController {
     public ApiResponse<ItineraryResponse.Detail> getItinerary(
         @PathVariable Long itineraryId
     ) {
-        return ApiResponse.success(mockItineraryDetail(itineraryId));
+        return ApiResponse.ok(mockItineraryDetail(itineraryId));
     }
 
     @Operation(summary = "빈 일정 직접 생성")
@@ -150,7 +150,7 @@ public class ItineraryController {
     public ApiResponse<ItineraryResponse.Created> createManual(
         @Valid @RequestBody ItineraryRequest.CreateManual request
     ) {
-        return ApiResponse.success(new ItineraryResponse.Created(42L));
+        return ApiResponse.ok(new ItineraryResponse.Created(42L));
     }
 
     @Operation(summary = "일정 메타 정보 수정 (제목, 도시, 날짜)")
@@ -159,7 +159,7 @@ public class ItineraryController {
         @PathVariable Long itineraryId,
         @RequestBody ItineraryRequest.UpdateMeta request
     ) {
-        return ApiResponse.success(new ItineraryResponse.Created(itineraryId));
+        return ApiResponse.ok(new ItineraryResponse.Created(itineraryId));
     }
 
     @Operation(summary = "여행 일정 삭제")
@@ -177,7 +177,7 @@ public class ItineraryController {
     public ApiResponse<ItineraryResponse.JobStatus> requestAiGenerate(
         @Valid @RequestBody ItineraryRequest.GenerateByAi request
     ) {
-        return ApiResponse.success(
+        return ApiResponse.ok(
             new ItineraryResponse.JobStatus(9001L, "PENDING", null, null)
         );
     }
@@ -188,7 +188,7 @@ public class ItineraryController {
         @PathVariable Long requestId
     ) {
         // Mock: 항상 COMPLETED 응답으로 프론트 개발 편의 제공
-        return ApiResponse.success(
+        return ApiResponse.ok(
             new ItineraryResponse.JobStatus(requestId, "COMPLETED", 1L, null)
         );
     }
@@ -201,7 +201,7 @@ public class ItineraryController {
     public ApiResponse<ItineraryResponse.JobStatus> requestYoutubeParse(
         @Valid @RequestBody ItineraryRequest.ParseYoutube request
     ) {
-        return ApiResponse.success(
+        return ApiResponse.ok(
             new ItineraryResponse.JobStatus(9002L, "PENDING", null, null)
         );
     }
@@ -211,7 +211,7 @@ public class ItineraryController {
     public ApiResponse<ItineraryResponse.JobStatus> pollYoutubeRequest(
         @PathVariable Long requestId
     ) {
-        return ApiResponse.success(
+        return ApiResponse.ok(
             new ItineraryResponse.JobStatus(requestId, "COMPLETED", 2L, null)
         );
     }
@@ -225,7 +225,7 @@ public class ItineraryController {
         @PathVariable Long itineraryId,
         @Valid @RequestBody ItineraryRequest.AddDay request
     ) {
-        return ApiResponse.success();
+        return ApiResponse.ok();
     }
 
     @Operation(summary = "Day 날짜/메모 수정")
@@ -235,7 +235,7 @@ public class ItineraryController {
         @PathVariable Long dayId,
         @RequestBody ItineraryRequest.UpdateDay request
     ) {
-        return ApiResponse.success();
+        return ApiResponse.ok();
     }
 
     @Operation(summary = "Day 삭제 (하위 슬롯 cascade 삭제)")
@@ -258,7 +258,7 @@ public class ItineraryController {
         @PathVariable Long dayId,
         @Valid @RequestBody ItineraryRequest.AddSlot request
     ) {
-        return ApiResponse.success();
+        return ApiResponse.ok();
     }
 
     @Operation(summary = "슬롯 수정 (시각, 순서, 메모, 체류시간)")
@@ -269,7 +269,7 @@ public class ItineraryController {
         @PathVariable Long slotId,
         @RequestBody ItineraryRequest.UpdateSlot request
     ) {
-        return ApiResponse.success();
+        return ApiResponse.ok();
     }
 
     @Operation(summary = "슬롯 삭제")
@@ -294,7 +294,7 @@ public class ItineraryController {
             new ItineraryResponse.AlternativeDetail(202L, 2,
                 mockPlace(5L, "퐁피두 센터", "Place Georges-Pompidou", "ATTRACTION", 48.8607, 2.3522, 4.3))
         );
-        return ApiResponse.success(mock);
+        return ApiResponse.ok(mock);
     }
 
     @Operation(summary = "장소 교체 (Swap) - 대안 장소와 현재 장소를 트랜잭션 내 교환")
@@ -316,7 +316,7 @@ public class ItineraryController {
             swapped,
             List.of(new ItineraryResponse.AlternativeDetail(request.alternativeId(), 1, prevMain))
         );
-        return ApiResponse.success(updated);
+        return ApiResponse.ok(updated);
     }
 
     @Operation(summary = "슬롯 순서 일괄 변경")
@@ -326,6 +326,6 @@ public class ItineraryController {
         @PathVariable Long dayId,
         @Valid @RequestBody ItineraryRequest.ReorderSlots request
     ) {
-        return ApiResponse.success();
+        return ApiResponse.ok();
     }
 }
