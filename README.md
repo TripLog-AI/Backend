@@ -19,37 +19,67 @@ H2 Console 접속 정보:
 - JDBC URL: `jdbc:h2:mem:tripledb`
 - Username: `sa` / Password: (없음)
 
-## 환경 변수 설정 (prod 프로파일)
+## 환경 변수 설정
 
-`src/main/resources/application-prod.yml` 파일을 직접 만들거나,
-루트에 `.env` 파일 생성 (`.gitignore`에 포함되어 있음):
+루트에 `.env` 파일 생성 (`.gitignore` 포함됨):
 
 ```bash
 cp .env.example .env
-# .env 파일에 실제 값 입력
+# 실제 값 입력 (JWT_SECRET, AI_SERVICE_URL, GOOGLE_MAPS_API_KEY 등)
 ```
 
-필요한 환경 변수 목록 → `docs/IMPLEMENTATION.md` 섹션 8 참고
+전체 환경 변수 목록 → `Docs/IMPLEMENTATION.md` 섹션 8
+
+## 인증 사용법
+
+모든 보호 엔드포인트는 `Authorization: Bearer <accessToken>` 필요.
+
+```bash
+# 1. 회원가입
+curl -X POST http://localhost:8080/api/v1/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"a@a.com","password":"password123","nickname":"alice"}'
+
+# 2. 로그인 → accessToken 받기
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"a@a.com","password":"password123"}'
+
+# 3. 보호 엔드포인트 호출
+curl http://localhost:8080/api/v1/itineraries \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+Swagger UI 우상단 `Authorize` 버튼에 토큰 입력하면 모든 API 테스트 가능.
 
 ## 프로젝트 구조
 
 ```
 src/main/java/com/triple/travel/
-├── common/          공통 (예외처리, DTO, 설정)
+├── common/
+│   ├── client/ai/        AI FastAPI RestClient
+│   ├── client/google/    Google Maps Places 클라이언트
+│   ├── config/           SecurityConfig, SwaggerConfig, DevDataSeeder
+│   ├── security/         JWT (Provider, Filter, EntryPoint, Principal)
+│   ├── exception/        커스텀 예외
+│   └── handler/          GlobalExceptionHandler
 └── domain/
-    ├── user/        회원
-    ├── place/       장소 (Google Maps 캐시)
-    ├── itinerary/   여행 일정 (핵심 도메인)
-    ├── travelogue/  여행기 커뮤니티
-    └── youtube/     유튜브 소스
+    ├── auth/             회원가입/로그인
+    ├── user/             회원
+    ├── place/            장소 (Google Maps 캐시 + 검색 API)
+    ├── itinerary/        여행 일정 (핵심)
+    ├── travelogue/       여행기 커뮤니티
+    └── youtube/          유튜브 추천 코스
 ```
 
 ## 현재 상태
 
-- ✅ 도메인 엔티티 전체
-- ✅ Repository (N+1 방지 쿼리 포함)
-- ✅ 핵심 Service (Place Swap, 발행 스냅샷, 스크랩)
-- ✅ Mock Controller (Swagger에서 바로 테스트 가능)
-- 🔧 JWT 인증 (미구현)
-- 🔧 Google Maps API 연동 (미구현)
-- 🔧 AI 서비스 HTTP 클라이언트 (미구현)
+- ✅ 전체 도메인 엔티티 + Repository (N+1 방지)
+- ✅ JWT 인증 (signup/login/필터)
+- ✅ 모든 Controller 실 service 연결 (Mock 제거 완료)
+- ✅ AI 서비스 RestClient (`AiClient`) — AI 서버 없으면 즉시 FAILED
+- ✅ Google Maps 클라이언트 골격 (api-key 없으면 DB 폴백)
+- ✅ DevDataSeeder — 부팅 시 YouTube featured 코스 3개 자동 시드
+- 🔧 Google Maps Places API 실제 호출 (`GoogleMapsClient.searchText` TODO)
+- 🔧 소셜 로그인 (Google/Kakao OAuth2)
+- 🔧 YouTube seed 코스 deep-copy
